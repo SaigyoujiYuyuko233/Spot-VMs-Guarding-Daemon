@@ -26,7 +26,7 @@ spec:
   # 最大带宽 (Mbps)
   internetMaxBandwidthOut: 5
   # 系统盘
-  systemDiskSize:
+  systemDisk:
     # 容量 (GB)
     size: 20
     type: cloud
