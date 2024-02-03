@@ -3,6 +3,7 @@ provider:
     # 服务商 api 标准
     # 阿里云: aliyun
     api: "aliyun"
+    regionId: "cn-shenzhen"
     endpoint: "ecs.cn-shenzhen.aliyuncs.com"
     accessId: "exampleID"
     accessKey: "exampleSecret"
