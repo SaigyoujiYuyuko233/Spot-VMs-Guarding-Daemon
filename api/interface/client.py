@@ -4,5 +4,7 @@ class IApiClient:
         pass
 
     def login(self, access_id, access_key):
-        pass
+        raise Exception("Not implemented")
     
+    def create_vm(self, config):
+        raise Exception("Not implemented")
