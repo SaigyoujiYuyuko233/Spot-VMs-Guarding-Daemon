@@ -32,15 +32,16 @@ spec:
     type: cloud
   # 数据盘挂载
   dataDisk: []
-    #- size: 20
-    #  type: cloud
-  # 付费模式，后付款
+#    - size: 20
+#      type: cloud
+#      # 随实例删除
+#      deleteWithInstance: true
 
 # 付费模式设置
 fee:
   # 网络付费模式
   internetChargeType: "PayByTraffic"
-  # vm 付费模式，不推荐更改
+  # vm 付费模式: 后付款 | 不推荐更改
   instanceChargeType: "PostPaid"
   # 抢占模式
   spotStrategy: "SpotAsPriceGo"
