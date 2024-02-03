@@ -1,9 +1,10 @@
 # 服务商和其账号设置
 providers:
   # 自定义的账号名称
-  - name: "aliyun_main"
+  aliyun_main:
     # 服务商 api 标准
     # 阿里云: aliyun
     api: "aliyun"
+    endpoint: "ecs.cn-shenzhen.aliyuncs.com"
     accessKeyId: "exampleID"
     accessKey: "exampleSecret"
