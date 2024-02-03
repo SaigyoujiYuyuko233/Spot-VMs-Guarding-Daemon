@@ -4,7 +4,7 @@ provider:
     # 阿里云: aliyun
     api: "aliyun"
     endpoint: "ecs.cn-shenzhen.aliyuncs.com"
-    accessKeyId: "exampleID"
+    accessId: "exampleID"
     accessKey: "exampleSecret"
 
 # 实例信息
@@ -45,6 +45,6 @@ fee:
   # 抢占模式
   spotStrategy: "SpotAsPriceGo"
   # 如果 抢占模式 为 SpotWithPriceLimit 生效
-  SpotPriceLimit: 0.02
+  spotPriceLimit: 0.02
   # 抢占式实例的保留时长 (hour)
-  SpotDuration: 1
+  spotDuration: 1
