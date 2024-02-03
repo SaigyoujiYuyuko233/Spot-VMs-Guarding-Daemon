@@ -1,0 +1,50 @@
+# 服务商和其账号设置
+provider:
+    # 服务商 api 标准
+    # 阿里云: aliyun
+    api: "aliyun"
+    endpoint: "ecs.cn-shenzhen.aliyuncs.com"
+    accessKeyId: "exampleID"
+    accessKey: "exampleSecret"
+
+# 实例信息
+metadata:
+  instanceName: "example"
+  hostName: "ciallo-vm"
+  password: "Passw0rd!"
+
+# 机器配置
+# 此配置针对阿里云的 api
+# 详细解释参考 https://api.aliyun.com/document/Ecs/2014-05-26/RunInstances#workbench-doc-params
+spec:
+  imageId: fedora_39_x64_20G_alibase_20231121.vhd
+  instanceType: ecs.t5-lc2m1.nano
+  # 安全组需要自己预先创建
+  securityGroupId: "sg-example"
+  # 虚拟交换机也需要自己预先创建
+  vSwitchId: "vsw-example"
+  # 最大带宽 (Mbps)
+  internetMaxBandwidthOut: 5
+  # 系统盘
+  systemDiskSize:
+    # 容量 (GB)
+    size: 20
+    type: cloud
+  # 数据盘挂载
+  dataDisk: []
+    #- size: 20
+    #  type: cloud
+  # 付费模式，后付款
+
+# 付费模式设置
+fee:
+  # 网络付费模式
+  internetChargeType: "PayByTraffic"
+  # vm 付费模式，不推荐更改
+  instanceChargeType: "PostPaid"
+  # 抢占模式
+  spotStrategy: "SpotAsPriceGo"
+  # 如果 抢占模式 为 SpotWithPriceLimit 生效
+  SpotPriceLimit: 0.02
+  # 抢占式实例的保留时长 (hour)
+  SpotDuration: 1
