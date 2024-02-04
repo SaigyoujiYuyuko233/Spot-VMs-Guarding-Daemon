@@ -1,5 +1,6 @@
 .venv/
 config/
+vm_config/
 **/.terraform
 **/.terraform.lock.hcl
 **/terraform.tfstate*
