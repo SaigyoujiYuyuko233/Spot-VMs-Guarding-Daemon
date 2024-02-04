@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.10 (spot-vms-init-daemon)" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.10 (spot-vms-init-daemon)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11.4 WSL (fedoraremix-wsl1): (/home/uuz/.virtualenvs/spot-vms-init-daemon/bin/python)" project-jdk-type="Python SDK" />
 </project>
