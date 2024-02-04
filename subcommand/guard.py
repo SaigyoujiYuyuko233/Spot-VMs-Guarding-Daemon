@@ -66,20 +66,21 @@ class GuardCommand(Command):
             logger.info("Skipping Terraform initialization")
 
         first_run = True
-        ansible_ran = True
         while True:
             if not first_run:
                 time.sleep(int(self.option("interval")))
             first_run = False
 
             # refresh states
-            logger.info("Refreshing state...")
-            tf_refresh_cmd = subprocess.run(["tofu", "refresh", "-no-color"], cwd=tf_path, stdout=-1)
-            if tf_refresh_cmd.returncode != 0:
-                logger.error("Terraform refresh failed! Retry later...",
+            logger.info("Comparing remote resources...")
+            tf_refresh_cmd = subprocess.run(["tofu", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=-1)
+            if tf_refresh_cmd.returncode == 0:
+                logger.info("Remote is same as local! Skipping..")
+
+            if tf_refresh_cmd.returncode == 1:
+                logger.error("Terraform plan failed! Retry later...",
                              Exception(tf_refresh_cmd.stdout.decode("utf-8")))
                 continue
-            logger.info("Terraform state refreshed")
 
             # check resources
             tf_state_path = f"{tf_path}/terraform.tfstate"
@@ -88,23 +89,41 @@ class GuardCommand(Command):
                     f"Terraform state file [{tf_state_path}] does not exist! How is this possible? Skipping..."))
                 continue
 
+            # check instance here, this way we can know to run ansible or not
             try:
                 instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
             except Exception as e:
                 logger.error("Fail to load Terraform state!", e)
                 continue
 
-            # create instance
-            just_created = False
-            if instance is None:
-                logger.info("Creating instance...")
+            # if instance does not exist, we will run ansible
+            run_ansible = instance is None
+
+            # If there is differences, apply it
+            if tf_refresh_cmd.returncode == 2:
+                logger.info("Remote is different from local!")
+                logger.info("Applying Terraform resources...")
+
                 tf_apply_cmd = subprocess.run(["tofu", "apply", "-no-color", "-auto-approve"], cwd=tf_path, stdout=-1)
                 if tf_apply_cmd.returncode != 0:
-                    logger.error("Terraform apply failed! Retry later...", Exception(tf_apply_cmd.stdout.decode("utf-8")))
+                    logger.error("Terraform apply failed! Retry later...",
+                                 Exception(tf_apply_cmd.stdout.decode("utf-8")))
                     continue
-                ansible_ran = False
-                just_created = True
-            else:
+
+            # re-check instance after applying
+            try:
+                instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
+            except Exception as e:
+                logger.error("Fail to load Terraform state after apply!", e)
+                continue
+
+            if instance is None:
+                logger.error(Exception(
+                    f"Can not find instance created before! How is this possible? Skipping..."))
+                continue
+
+            # for logging purpose
+            if tf_refresh_cmd.returncode == 2:
                 # TODO: attribute might not be compatible for other provider
                 logger.info(f"Instance {instance['instance_name']}[{instance['id']}] exists. Skip creating...")
 
@@ -114,12 +133,13 @@ class GuardCommand(Command):
                 logger.error("Fail to load Terraform state!", e)
                 continue
 
-            if just_created:
+            # For logging purpose
+            if tf_refresh_cmd.returncode == 2:
                 # TODO: attribute might not be compatible for other provider
                 logger.info(f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
 
             # Run ansible
-            if ansible_ran:
+            if run_ansible:
                 # TODO: attribute might not be compatible for other provider
                 logger.info(f"No need to run ansible on {instance['instance_name']}[{instance['id']}]. Skip...")
                 continue
