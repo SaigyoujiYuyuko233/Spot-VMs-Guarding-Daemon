@@ -8,6 +8,8 @@ from cleo.helpers import option
 
 from loguru import logger
 
+from util import tf_state_util
+
 
 class GuardCommand(Command):
     name = "guard"
@@ -87,36 +89,39 @@ class GuardCommand(Command):
                 continue
 
             try:
-                tf_state = self.load_json(tf_state_path)["resources"]
+                instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
             except Exception as e:
                 logger.error("Fail to load Terraform state!", e)
                 continue
 
             # create instance
-            if len(tf_state) < 0:
+            just_created = False
+            if instance is None:
                 logger.info("Creating instance...")
                 tf_apply_cmd = subprocess.run(["tofu", "apply", "-no-color", "-auto-approve"], cwd=tf_path, stdout=-1)
                 if tf_apply_cmd.returncode != 0:
                     logger.error("Terraform apply failed! Retry later...", Exception(tf_apply_cmd.stdout.decode("utf-8")))
                     continue
                 ansible_ran = False
+                just_created = True
             else:
-                # TODO: Change default index 0 to func that auto find instance index
-                logger.info(f"Instance [{tf_state[0]['name']}] exists. Skip creating...")
+                # TODO: attribute might not be compatible for other provider
+                logger.info(f"Instance {instance['instance_name']}[{instance['id']}] exists. Skip creating...")
 
             try:
-                # TODO: Change default index 0 to func that auto find instance index
-                instance = self.load_json(tf_state_path)["resources"][0]
+                instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
             except Exception as e:
                 logger.error("Fail to load Terraform state!", e)
                 continue
 
-            if len(tf_state) < 0:
-                logger.info(f"Instance [{instance['id']}] created! IP: {instance['public_ip']}")
+            if just_created:
+                # TODO: attribute might not be compatible for other provider
+                logger.info(f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
 
             # Run ansible
             if ansible_ran:
-                logger.info(f"No need for running ansible [{tf_state[0]['name']}]. Skip...")
+                # TODO: attribute might not be compatible for other provider
+                logger.info(f"No need to run ansible on {instance['instance_name']}[{instance['id']}]. Skip...")
                 continue
 
             # TODO: Run ansible
