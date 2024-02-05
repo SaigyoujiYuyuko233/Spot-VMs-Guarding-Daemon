@@ -1,0 +1,10 @@
+---
+
+- name: Ping Test
+  hosts: all
+  remote_user: root
+
+  tasks:
+    - name: Ping command
+      ansible.builtin.shell:
+        cmd: "whoami; echo ciallo~"
