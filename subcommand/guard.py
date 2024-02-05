@@ -64,7 +64,7 @@ class GuardCommand(Command):
         config_root = self.option("config")
         tf_path = f"{config_root}/terraform"
         ansible_path = f"{config_root}/ansible"
-        ansible_inv = f"{ansible_path}/{self.option('user-inventory')}"
+        ansible_inv = f"{ansible_path}/{self.option('ansible-inventory')}"
         ansible_playbook = f"{ansible_path}/{self.option('ansible-playbook')}"
 
         if not os.path.isdir(config_root):
