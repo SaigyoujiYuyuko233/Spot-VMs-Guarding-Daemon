@@ -40,7 +40,6 @@ class GuardCommand(Command):
         ),
         option(
             "ansible-inventory",
-            "i",
             description="specify ansible inventory template file in user_config/ansible/",
             flag=False,
             value_required=True,
