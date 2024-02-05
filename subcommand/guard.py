@@ -31,6 +31,22 @@ class GuardCommand(Command):
             default=30
         ),
         option(
+            "ansible-playbook",
+            "p",
+            description="specify ansible playbook file in user_config/ansible/",
+            flag=False,
+            value_required=True,
+            default="playbook.yaml"
+        ),
+        option(
+            "ansible-inventory",
+            "i",
+            description="specify ansible inventory template file in user_config/ansible/",
+            flag=False,
+            value_required=True,
+            default="user-inventory.ini"
+        ),
+        option(
             "skip-tf-init",
             description="Skip terraform init",
             flag=True,
@@ -48,12 +64,21 @@ class GuardCommand(Command):
     def handle(self):
         config_root = self.option("config")
         tf_path = f"{config_root}/terraform"
+        ansible_path = f"{config_root}/ansible"
+        ansible_inv = f"{ansible_path}/{self.option('user-inventory')}"
+        ansible_playbook = f"{ansible_path}/{self.option('ansible-playbook')}"
 
         if not os.path.isdir(config_root):
             raise logger.critical(Exception(f"Path [{config_root}] should be a directory"))
 
         if not os.path.isfile(f"{tf_path}/main.tf"):
             raise logger.critical(Exception(f"Terraform config [{tf_path}/main.tf] does not exist"))
+
+        if not os.path.isfile(ansible_inv):
+            raise logger.critical(Exception(f"Ansible inventory [{ansible_inv}] does not exist"))
+
+        if not os.path.isfile(ansible_playbook):
+            raise logger.critical(Exception(f"Ansible playbook [{ansible_playbook}] does not exist"))
 
         # init tf
         if not self.option("skip-tf-init"):
