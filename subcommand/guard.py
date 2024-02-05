@@ -47,17 +47,18 @@ class GuardCommand(Command):
 
     def handle(self):
         config_root = self.option("config")
+        tf_path = f"{config_root}/terraform"
 
         if not os.path.isdir(config_root):
             raise logger.critical(Exception(f"Path [{config_root}] should be a directory"))
 
-        if not os.path.isfile(f"{config_root}/main.tf"):
-            raise logger.critical(Exception(f"Terraform config [{config_root}/main.tf] does not exist"))
+        if not os.path.isfile(f"{tf_path}/main.tf"):
+            raise logger.critical(Exception(f"Terraform config [{tf_path}/main.tf] does not exist"))
 
         # init tf
         if not self.option("skip-tf-init"):
             logger.info("Initializing Terraform")
-            tf_init_cmd = subprocess.run(["tofu", "init", "-no-color"], cwd=config_root, stdout=-1)
+            tf_init_cmd = subprocess.run(["tofu", "init", "-no-color"], cwd=tf_path, stdout=-1)
             if tf_init_cmd.returncode != 0:
                 raise logger.critical("Terraform init failed", Exception(tf_init_cmd.stdout.decode("utf-8")))
             logger.info("Terraform initialized!")
@@ -72,21 +73,38 @@ class GuardCommand(Command):
 
             # refresh states
             logger.info("Comparing remote resources...")
-            tf_plan_cmd = subprocess.run(["tofu", "plan", "-detailed-exitcode"], cwd=config_root, stdout=-1)
-            if tf_plan_cmd.returncode == 0:
+            tf_refresh_cmd = subprocess.run(["tofu", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=-1)
+            if tf_refresh_cmd.returncode == 0:
                 logger.info("Remote is same as local! Skipping..")
 
-            if tf_plan_cmd.returncode == 1:
+            if tf_refresh_cmd.returncode == 1:
                 logger.error("Terraform plan failed! Retry later...",
-                             Exception(tf_plan_cmd.stdout.decode("utf-8")))
+                             Exception(tf_refresh_cmd.stdout.decode("utf-8")))
                 continue
 
+            # check resources
+            tf_state_path = f"{tf_path}/terraform.tfstate"
+            if not os.path.isfile(tf_state_path):
+                logger.error(Exception(
+                    f"Terraform state file [{tf_state_path}] does not exist! How is this possible? Skipping..."))
+                continue
+
+            # check instance here, this way we can know to run ansible or not
+            try:
+                instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
+            except Exception as e:
+                logger.error("Fail to load Terraform state!", e)
+                continue
+
+            # if instance does not exist, we will run ansible
+            run_ansible = instance is None
+
             # If there is differences, apply it
-            if tf_plan_cmd.returncode == 2:
+            if tf_refresh_cmd.returncode == 2:
                 logger.info("Remote is different from local!")
                 logger.info("Applying Terraform resources...")
 
-                tf_apply_cmd = subprocess.run(["tofu", "apply", "-no-color", "-auto-approve"], cwd=config_root, stdout=-1)
+                tf_apply_cmd = subprocess.run(["tofu", "apply", "-no-color", "-auto-approve"], cwd=tf_path, stdout=-1)
                 if tf_apply_cmd.returncode != 0:
                     logger.error("Terraform apply failed! Retry later...",
                                  Exception(tf_apply_cmd.stdout.decode("utf-8")))
@@ -94,7 +112,6 @@ class GuardCommand(Command):
 
             # re-check instance after applying
             try:
-                tf_state_path = f"{config_root}/terraform.tfstate"
                 instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
             except Exception as e:
                 logger.error("Fail to load Terraform state after apply!", e)
@@ -105,6 +122,11 @@ class GuardCommand(Command):
                     f"Can not find instance created before! How is this possible? Skipping..."))
                 continue
 
+            # for logging purpose
+            if tf_refresh_cmd.returncode == 2:
+                # TODO: attribute might not be compatible for other provider
+                logger.info(f"Instance {instance['instance_name']}[{instance['id']}] exists. Skip creating...")
+
             try:
                 instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
             except Exception as e:
@@ -112,6 +134,15 @@ class GuardCommand(Command):
                 continue
 
             # For logging purpose
-            if tf_plan_cmd.returncode == 2:
+            if tf_refresh_cmd.returncode == 2:
                 # TODO: attribute might not be compatible for other provider
                 logger.info(f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
+
+            # Run ansible
+            if run_ansible:
+                # TODO: attribute might not be compatible for other provider
+                logger.info(f"No need to run ansible on {instance['instance_name']}[{instance['id']}]. Skip...")
+                continue
+
+            # TODO: Run ansible
+            ansible_ran = True
