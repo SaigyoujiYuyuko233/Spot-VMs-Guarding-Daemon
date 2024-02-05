@@ -5,7 +5,6 @@ import time
 
 from cleo.commands.command import Command
 from cleo.helpers import option
-
 from loguru import logger
 
 from util import tf_state_util, log
@@ -161,21 +160,18 @@ class GuardCommand(Command):
                 continue
 
             # for logging purpose
+            # TODO: attribute might not be compatible for other provider
             if tf_refresh_cmd.returncode == 2:
-                # TODO: attribute might not be compatible for other provider
-                logger.info(f"Instance {instance['instance_name']}[{instance['id']}] exists. Skip creating...")
+                if instance is not None:
+                    logger.info(f"Instance {instance['instance_name']}[{instance['id']}] exists. Skip creating...")
+                else:
+                    logger.info(f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
 
             try:
                 instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
             except Exception as e:
                 logger.error("Fail to load Terraform state!", e)
                 continue
-
-            # For logging purpose
-            if tf_refresh_cmd.returncode == 2:
-                # TODO: attribute might not be compatible for other provider
-                logger.info(
-                    f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
 
             # Check ansible
             if not run_ansible:
