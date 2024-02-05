@@ -84,7 +84,7 @@ class GuardCommand(Command):
             logger.info("Initializing Terraform")
             tf_init_cmd = subprocess.run(["tofu", "init", "-no-color"], cwd=tf_path, stdout=-1)
             if tf_init_cmd.returncode != 0:
-                log.log_critical_and_raise("Terraform init failed", Exception(tf_init_cmd.stdout.decode("utf-8")))
+                log.log_critical_and_raise(Exception(f"Terraform init failed: {tf_init_cmd.stdout.decode('utf-8')}"))
             logger.info("Terraform initialized!")
         else:
             logger.info("Skipping Terraform initialization")
