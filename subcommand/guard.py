@@ -8,7 +8,7 @@ from cleo.helpers import option
 
 from loguru import logger
 
-from util import tf_state_util
+from util import tf_state_util, log
 
 
 class GuardCommand(Command):
@@ -49,6 +49,12 @@ class GuardCommand(Command):
             flag=False,
             value_required=True,
             default="user-inventory.ini"
+        ),
+        option(
+            "ansible-extra-arg",
+            description="User defined args for ansible. Such as disable host key checking",
+            flag=False,
+            value_required=True,
         ),
         option(
             "skip-tf-init",
@@ -168,14 +174,62 @@ class GuardCommand(Command):
             # For logging purpose
             if tf_refresh_cmd.returncode == 2:
                 # TODO: attribute might not be compatible for other provider
-                logger.info(f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
+                logger.info(
+                    f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
 
-            # Run ansible
-            if run_ansible:
-                # TODO: attribute might not be compatible for other provider
+            # Check ansible
+            if not run_ansible:
                 logger.info(f"No need to run ansible on {instance['instance_name']}[{instance['id']}]. Skip...")
                 continue
 
-            # TODO: Run ansible
-            if not run_ansible:
-                logger.info(f"Skip ansible run on {instance['instance_name']}")
+            # ============ Prepare Ansible Run ============
+            logger.info("Preparing Ansible run...")
+
+            # generate inventory
+            try:
+                with open(ansible_inv, mode='r', encoding="utf-8") as f:
+                    inv_tmp = f.read()
+                    f.close()
+            except Exception as e:
+                logger.error("Fail to read Ansible inventory! Retry later...", e)
+                continue
+
+            inv_tmp = inv_tmp.replace("%instance_ip%", instance['public_ip'])
+
+            try:
+                ansible_inv_tmp_file = f"{ansible_path}/inventory-gen.ini"
+                with open(ansible_inv_tmp_file, mode='w+', encoding="utf-8") as f:
+                    f.write(inv_tmp)
+                    f.close()
+            except Exception as e:
+                logger.error("Fail to write temperate Ansible inventory! Retry later...", e)
+                continue
+
+            # Run ansible
+            ansible_playbook_cmd_args = [
+                "ansible-playbook",
+                "-i", "inventory-gen.ini",
+                self.option('ansible-playbook')
+            ]
+            if self.option("ansible-extra-arg"):
+                ansible_playbook_cmd_args += self.option("ansible-extra-arg").split(" ")
+            logger.info("Running Ansible playbook with following arguments:")
+            logger.info(ansible_playbook_cmd_args)
+
+            ansible_playbook_cmd = subprocess.Popen(ansible_playbook_cmd_args, cwd=ansible_path, stdout=subprocess.PIPE)
+            while ansible_playbook_cmd.stdout is not None:
+                line = ansible_playbook_cmd.stdout.readline().decode("utf-8")
+                if not line:
+                    break
+                logger.info(f"Ansible Playbook | {line.rstrip()}")
+
+            while ansible_playbook_cmd.stderr is not None:
+                line = ansible_playbook_cmd.stderr.readline().decode("utf-8")
+                if not line:
+                    break
+                logger.error("Ansible Playbook Error | ", line.rstrip())
+
+            # Finish ansible run
+            run_ansible = False
+
+            logger.info("Ansible Playbook finished!")
