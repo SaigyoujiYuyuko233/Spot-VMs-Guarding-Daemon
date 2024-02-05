@@ -68,23 +68,23 @@ class GuardCommand(Command):
         ansible_playbook = f"{ansible_path}/{self.option('ansible-playbook')}"
 
         if not os.path.isdir(config_root):
-            raise logger.critical(Exception(f"Path [{config_root}] should be a directory"))
+            log.log_critical_and_raise(Exception(f"Path [{config_root}] should be a directory"))
 
         if not os.path.isfile(f"{tf_path}/main.tf"):
-            raise logger.critical(Exception(f"Terraform config [{tf_path}/main.tf] does not exist"))
+            log.log_critical_and_raise(Exception(f"Terraform config [{tf_path}/main.tf] does not exist"))
 
         if not os.path.isfile(ansible_inv):
-            raise logger.critical(Exception(f"Ansible inventory [{ansible_inv}] does not exist"))
+            log.log_critical_and_raise(Exception(f"Ansible inventory [{ansible_inv}] does not exist"))
 
         if not os.path.isfile(ansible_playbook):
-            raise logger.critical(Exception(f"Ansible playbook [{ansible_playbook}] does not exist"))
+            log.log_critical_and_raise(Exception(f"Ansible playbook [{ansible_playbook}] does not exist"))
 
         # init tf
         if not self.option("skip-tf-init"):
             logger.info("Initializing Terraform")
             tf_init_cmd = subprocess.run(["tofu", "init", "-no-color"], cwd=tf_path, stdout=-1)
             if tf_init_cmd.returncode != 0:
-                raise logger.critical("Terraform init failed", Exception(tf_init_cmd.stdout.decode("utf-8")))
+                log.log_critical_and_raise("Terraform init failed", Exception(tf_init_cmd.stdout.decode("utf-8")))
             logger.info("Terraform initialized!")
         else:
             logger.info("Skipping Terraform initialization")
