@@ -31,6 +31,11 @@ class GuardCommand(Command):
             default=30
         ),
         option(
+            "run-ansible",
+            description="Make ansible run at first even instance is existed. Use for error recovery",
+            flag=True,
+        ),
+        option(
             "ansible-playbook",
             "p",
             description="specify ansible playbook file in user_config/ansible/",
@@ -90,6 +95,7 @@ class GuardCommand(Command):
             logger.info("Skipping Terraform initialization")
 
         first_run = True
+        run_ansible = self.option("run-ansible")
         while True:
             if not first_run:
                 time.sleep(int(self.option("interval")))
@@ -121,7 +127,9 @@ class GuardCommand(Command):
                 continue
 
             # if instance does not exist, we will run ansible
-            run_ansible = instance is None
+            # if the instance is new created
+            # or the previous ansible run failed
+            run_ansible = instance is None or run_ansible
 
             # If there is differences, apply it
             if tf_refresh_cmd.returncode == 2:
