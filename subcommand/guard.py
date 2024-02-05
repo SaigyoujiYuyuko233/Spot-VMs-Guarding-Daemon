@@ -145,4 +145,5 @@ class GuardCommand(Command):
                 continue
 
             # TODO: Run ansible
-            ansible_ran = True
+            if not run_ansible:
+                logger.info(f"Skip ansible run on {instance['instance_name']}")
