@@ -38,31 +38,84 @@
 8. 在 ansible 目录下生成 ``inventory-gen.ini``
 9. 运行 Playbook (``--ansible-playbook=require_value.yaml``)
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## 安装和使用
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### 依赖
+- OpenTofu (Terraform 是不支持的，因为写死了)
+- Ansible
+- Python
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### 安装 & 使用
+1. Clone 本仓库
+2. ``pip install -r requirements.txt``
+3. ``python main.py guard -vvv`` (强烈推荐添加 -vvv)
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## 一些见解
+main.tf 里面不只可以写你的云实例，你还可以...
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+### DDNS?
+拿 Cloudflare 举例，这是他的 provider
+```terraform
+ cloudflare = {
+   source  = "cloudflare/cloudflare"
+   version = "~> 4.0"
+ }
+```
+然后配置下你的 token
+```terraform
+provider "cloudflare" {
+  api_token = "ciallo"
+}
+```
+最后添加解析
+```terraform
+resource "cloudflare_record" "ddns" {
+  zone_id = "Gensokyo"
+  name    = "my-vm"
+  value   = alicloud_instance.你的label.public_ip
+  type    = "A"
+  ttl     = 60
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+  depends_on = [
+    alicloud_instance.你的label,
+  ]
+}
+```
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### 添加阿里云的 SSH 公钥
+这样子你就可以流畅使用 Ansible 了
+```terraform
+resource "alicloud_ecs_key_pair" "你的pubkey_label" {
+  key_pair_name = "my-ssh-pubkey-for-ansible"
+  public_key    = "ssh-ed25519 AAAAxxxxxx"
+}
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```terraform
+resource "alicloud_ecs_key_pair_attachment" "你的label" {
+  key_pair_name = alicloud_ecs_key_pair.你的pubkey_label.key_pair_name
+  instance_ids  = [alicloud_instance.你的label.id]
 
-## License
-For open source projects, say how it is licensed.
+  depends_on = [
+    alicloud_instance.你的label,
+    alicloud_ecs_key_pair.你的pubkey_label
+  ]
+}
+```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### 你不止可以 Ansible 刚创建的实例
+比如说我有一台软路由，我想部署下客户端什么的，你可以整 Ansible
 
+最后强烈建议去看下 ``example_config`` 里面的一些操作。
+
+## 支持
+直接发 Issue
+
+## 未来计划
+- 可能会支持其他的提供商
+- 封装个 Docker 镜像
+- 分享点 Ansible playbook
+
+## 共享
+欢迎 PR  
+欢迎制作更多的例子，比如说 Frp 什么的 ansible playbook 到 ``example_config`` 里面
