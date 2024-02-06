@@ -50,6 +50,10 @@
 2. ``pip install -r requirements.txt``
 3. ``python main.py guard -vvv`` (强烈推荐添加 -vvv)
 
+### 移除资源
+
+进入 ``user_config/terraform`` 然后执行 ``terraform apply -destory``
+
 ## 一些见解
 main.tf 里面不只可以写你的云实例，你还可以...
 
