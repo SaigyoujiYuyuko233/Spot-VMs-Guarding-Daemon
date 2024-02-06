@@ -126,7 +126,7 @@ class GuardCommand(Command):
 
             # check instance here, this way we can know to run ansible or not
             try:
-                instance = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
+                instance_before_apply = tf_state_util.find_vm_instance(self.load_json(tf_state_path)["resources"])
             except Exception as e:
                 logger.error("Fail to load Terraform state!", e)
                 continue
@@ -134,7 +134,7 @@ class GuardCommand(Command):
             # if instance does not exist, we will run ansible
             # if the instance is new created
             # or the previous ansible run failed
-            run_ansible = instance is None or run_ansible
+            run_ansible = instance_before_apply is None or run_ansible
 
             # If there is differences, apply it
             if tf_refresh_cmd.returncode == 2:
@@ -162,7 +162,7 @@ class GuardCommand(Command):
             # for logging purpose
             # TODO: attribute might not be compatible for other provider
             if tf_refresh_cmd.returncode == 2:
-                if instance is not None:
+                if instance_before_apply is not None:
                     logger.info(f"Instance {instance['instance_name']}[{instance['id']}] exists. Skip creating...")
                 else:
                     logger.info(f"Instance {instance['instance_name']}[{instance['id']}] created! Instance IP: {instance['public_ip']}")
