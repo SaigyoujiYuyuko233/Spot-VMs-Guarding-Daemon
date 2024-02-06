@@ -110,7 +110,7 @@ class GuardCommand(Command):
             logger.info("Comparing remote resources...")
             tf_refresh_cmd = subprocess.run(["tofu", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=-1)
             if tf_refresh_cmd.returncode == 0:
-                logger.info("Remote is same as local! Skipping..")
+                logger.info("Local state matches remote resources!")
 
             if tf_refresh_cmd.returncode == 1:
                 logger.error("Terraform plan failed! Retry later...",
