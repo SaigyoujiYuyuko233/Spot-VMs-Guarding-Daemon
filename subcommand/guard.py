@@ -92,7 +92,7 @@ class GuardCommand(Command):
         # init tf
         if not self.option("skip-tf-init"):
             logger.info("Initializing Terraform")
-            tf_init_cmd = subprocess.run(["tofu", "init", "-no-color"], cwd=tf_path, stdout=-1)
+            tf_init_cmd = subprocess.run(["terraform", "init", "-no-color"], cwd=tf_path, stdout=-1)
             if tf_init_cmd.returncode != 0:
                 log.log_critical_and_raise(Exception(f"Terraform init failed: {tf_init_cmd.stdout.decode('utf-8')}"))
             logger.info("Terraform initialized!")
@@ -108,7 +108,7 @@ class GuardCommand(Command):
 
             # refresh states
             logger.info("Comparing remote resources...")
-            tf_refresh_cmd = subprocess.run(["tofu", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=-1)
+            tf_refresh_cmd = subprocess.run(["terraform", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=-1)
             if tf_refresh_cmd.returncode == 0:
                 logger.info("Local state matches remote resources!")
 
@@ -141,7 +141,7 @@ class GuardCommand(Command):
                 logger.info("Remote is different from local!")
                 logger.info("Applying Terraform resources...")
 
-                tf_apply_cmd = subprocess.run(["tofu", "apply", "-no-color", "-auto-approve"], cwd=tf_path, stdout=-1)
+                tf_apply_cmd = subprocess.run(["terraform", "apply", "-no-color", "-auto-approve"], cwd=tf_path, stdout=-1)
                 if tf_apply_cmd.returncode != 0:
                     logger.error("Terraform apply failed! Retry later...",
                                  Exception(tf_apply_cmd.stdout.decode("utf-8")))

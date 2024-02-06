@@ -41,7 +41,7 @@
 ## 安装和使用
 
 ### 依赖
-- OpenTofu (Terraform 是不支持的，因为写死了)
+- Terraform
 - Ansible
 - Python
 
