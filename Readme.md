@@ -57,6 +57,13 @@
 ## 一些见解
 main.tf 里面不只可以写你的云实例，你还可以...
 
+### 服务器刚刚创建还没完成安装导致 ansible 错误?
+试试看在 inventory var 里面
+```ini
+ansible_ssh_retries=12
+ansible_ssh_timeout=180
+```
+
 ### DDNS?
 拿 Cloudflare 举例，这是他的 provider
 ```terraform
