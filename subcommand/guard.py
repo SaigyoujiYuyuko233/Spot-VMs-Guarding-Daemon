@@ -1,3 +1,4 @@
+import glob
 import json
 import os.path
 import subprocess
@@ -73,21 +74,13 @@ class GuardCommand(Command):
     def handle(self):
         config_root = self.option("config")
         tf_path = f"{config_root}/terraform"
-        ansible_path = f"{config_root}/ansible"
-        ansible_inv = f"{ansible_path}/{self.option('ansible-inventory')}"
-        ansible_playbook = f"{ansible_path}/{self.option('ansible-playbook')}"
+        ansible_root = f"{config_root}/ansible"
 
         if not os.path.isdir(config_root):
             log.log_critical_and_raise(Exception(f"Path [{config_root}] should be a directory"))
 
         if not os.path.isfile(f"{tf_path}/main.tf"):
             log.log_critical_and_raise(Exception(f"Terraform config [{tf_path}/main.tf] does not exist"))
-
-        if not os.path.isfile(ansible_inv):
-            log.log_critical_and_raise(Exception(f"Ansible inventory [{ansible_inv}] does not exist"))
-
-        if not os.path.isfile(ansible_playbook):
-            log.log_critical_and_raise(Exception(f"Ansible playbook [{ansible_playbook}] does not exist"))
 
         # init tf
         if not self.option("skip-tf-init"):
@@ -181,49 +174,60 @@ class GuardCommand(Command):
             # ============ Prepare Ansible Run ============
             logger.info("Preparing Ansible run...")
 
-            # generate inventory
-            try:
-                with open(ansible_inv, mode='r', encoding="utf-8") as f:
-                    inv_tmp = f.read()
-                    f.close()
-            except Exception as e:
-                logger.error("Fail to read Ansible inventory! Retry later...", e)
-                continue
+            for ansible_path in glob.glob(f"{ansible_root}/*/"):
+                ansible_inv = f"{ansible_path}{self.option('ansible-inventory')}"
+                ansible_playbook = f"{ansible_path}{self.option('ansible-playbook')}"
 
-            inv_tmp = inv_tmp.replace("%instance_ip%", instance['public_ip'])
+                if not os.path.isfile(ansible_inv):
+                    log.log_critical_and_raise(Exception(f"Ansible inventory [{ansible_inv}] does not exist"))
 
-            try:
-                ansible_inv_tmp_file = f"{ansible_path}/inventory-gen.ini"
-                with open(ansible_inv_tmp_file, mode='w+', encoding="utf-8") as f:
-                    f.write(inv_tmp)
-                    f.close()
-            except Exception as e:
-                logger.error("Fail to write temperate Ansible inventory! Retry later...", e)
-                continue
+                if not os.path.isfile(ansible_playbook):
+                    log.log_critical_and_raise(Exception(f"Ansible playbook [{ansible_playbook}] does not exist"))
 
-            # Run ansible
-            ansible_playbook_cmd_args = [
-                "ansible-playbook",
-                "-i", "inventory-gen.ini",
-                self.option('ansible-playbook')
-            ]
-            if self.option("ansible-extra-arg"):
-                ansible_playbook_cmd_args += self.option("ansible-extra-arg").split(" ")
-            logger.info("Running Ansible playbook with following arguments:")
-            logger.info(ansible_playbook_cmd_args)
+                # generate inventory
+                logger.info(f"Generating Ansible inventory for {ansible_path.split('/')[-2]}...")
+                try:
+                    with open(ansible_inv, mode='r', encoding="utf-8") as f:
+                        inv_tmp = f.read()
+                        f.close()
+                except Exception as e:
+                    logger.error("Fail to read Ansible inventory! Retry later...", e)
+                    continue
 
-            ansible_playbook_cmd = subprocess.Popen(ansible_playbook_cmd_args, cwd=ansible_path, stdout=subprocess.PIPE)
-            while ansible_playbook_cmd.stdout is not None:
-                line = ansible_playbook_cmd.stdout.readline().decode("utf-8")
-                if not line:
-                    break
-                logger.info(f"Ansible Playbook | {line.rstrip()}")
+                inv_tmp = inv_tmp.replace("%instance_ip%", instance['public_ip'])
 
-            while ansible_playbook_cmd.stderr is not None:
-                line = ansible_playbook_cmd.stderr.readline().decode("utf-8")
-                if not line:
-                    break
-                logger.error("Ansible Playbook Error | ", line.rstrip())
+                try:
+                    ansible_inv_tmp_file = f"{ansible_path}/inventory-gen.ini"
+                    with open(ansible_inv_tmp_file, mode='w+', encoding="utf-8") as f:
+                        f.write(inv_tmp)
+                        f.close()
+                except Exception as e:
+                    logger.error("Fail to write temperate Ansible inventory! Retry later...", e)
+                    continue
+
+                # Run ansible
+                ansible_playbook_cmd_args = [
+                    "ansible-playbook",
+                    "-i", "inventory-gen.ini",
+                    self.option('ansible-playbook')
+                ]
+                if self.option("ansible-extra-arg"):
+                    ansible_playbook_cmd_args += self.option("ansible-extra-arg").split(" ")
+                logger.info("Running Ansible playbook with following arguments:")
+                logger.info(ansible_playbook_cmd_args)
+
+                ansible_playbook_cmd = subprocess.Popen(ansible_playbook_cmd_args, cwd=ansible_path, stdout=subprocess.PIPE)
+                while ansible_playbook_cmd.stdout is not None:
+                    line = ansible_playbook_cmd.stdout.readline().decode("utf-8")
+                    if not line:
+                        break
+                    logger.info(f"Ansible Playbook | {line.rstrip()}")
+
+                while ansible_playbook_cmd.stderr is not None:
+                    line = ansible_playbook_cmd.stderr.readline().decode("utf-8")
+                    if not line:
+                        break
+                    logger.error("Ansible Playbook Error | ", line.rstrip())
 
             # Finish ansible run
             run_ansible = False
