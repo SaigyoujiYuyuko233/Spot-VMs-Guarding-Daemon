@@ -64,6 +64,15 @@ ansible_ssh_retries=12
 ansible_ssh_timeout=180
 ```
 
+### 在其他地方无法使用 %instance_ip%
+在 inventory 里面这么写
+```
+[my_host]
+nickname ansible_ssh_host=%instance_ip%
+```
+之后使用 ``nickname`` 作为别名就行了  
+或者你可以在 terraform 里面创建解析
+
 ### DDNS?
 拿 Cloudflare 举例，这是他的 provider
 ```terraform
