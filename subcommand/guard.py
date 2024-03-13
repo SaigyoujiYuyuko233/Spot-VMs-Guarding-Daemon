@@ -100,15 +100,21 @@ class GuardCommand(Command):
             first_run = False
 
             # refresh states
-            logger.info("Comparing remote resources...")
-            tf_refresh_cmd = subprocess.Popen(["terraform", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=subprocess.PIPE)
-            if tf_refresh_cmd.returncode == 0:
-                logger.info("Local state matches remote resources!")
+            logger.info("Comparing remote resources via refresh & plan...")
+            tf_plan_cmd = subprocess.run(["terraform", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=subprocess.PIPE)
 
-            if tf_refresh_cmd.returncode == 1:
-                logger.error("Terraform plan failed! Retry later...",
-                             Exception(tf_refresh_cmd.stdout.decode("utf-8")))
+            if tf_plan_cmd.returncode == 0:
+                logger.info("Local state matches remote resources!")
                 continue
+
+            if tf_plan_cmd.returncode == 1:
+                logger.error("Terraform plan failed! Retry later...",
+                             Exception(tf_plan_cmd.stdout.decode("utf-8")))
+                continue
+
+            # refresh state file for later ansible cond
+            if tf_plan_cmd.returncode == 2:
+                subprocess.run(["terraform", "refresh"], cwd=tf_path, stdout=subprocess.DEVNULL)
 
             # check resources
             tf_state_path = f"{tf_path}/terraform.tfstate"
@@ -130,14 +136,13 @@ class GuardCommand(Command):
             run_ansible = instance_before_apply is None or run_ansible
 
             # If there is differences, apply it
-            if tf_refresh_cmd.returncode == 2:
+            if tf_plan_cmd.returncode == 2:
                 logger.info("Remote is different from local!")
 
-                while tf_refresh_cmd.stdout is not None:
-                    line = tf_refresh_cmd.stdout.readline().decode("utf-8")
-                    if not line:
-                        break
-                    logger.info(f"Terraform State | {line.rstrip()}")
+                if tf_plan_cmd.stdout is not None:
+                    lines = tf_plan_cmd.stdout.decode("utf-8").split("\n")
+                    for line in lines:
+                        logger.info(f"Terraform State | {line.rstrip()}")
 
                 logger.info("Applying Terraform resources...")
 
@@ -161,7 +166,7 @@ class GuardCommand(Command):
 
             # for logging purpose
             # TODO: attribute might not be compatible for other provider
-            if tf_refresh_cmd.returncode == 2:
+            if tf_plan_cmd.returncode == 2:
                 if instance_before_apply is not None:
                     logger.info(f"Instance {instance['instance_name']}[{instance['id']}] exists. Skip creating...")
                 else:

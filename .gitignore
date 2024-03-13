@@ -5,3 +5,6 @@ vm_config/
 **/.terraform.lock.hcl
 **/terraform.tfstate*
 __pycache__/
+.idea/webServers.xml
+.idea/sshConfigs.xml
+.idea/deployment.xml
