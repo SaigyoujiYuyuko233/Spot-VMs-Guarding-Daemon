@@ -101,7 +101,7 @@ class GuardCommand(Command):
 
             # refresh states
             logger.info("Comparing remote resources...")
-            tf_refresh_cmd = subprocess.run(["terraform", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=-1)
+            tf_refresh_cmd = subprocess.Popen(["terraform", "plan", "-detailed-exitcode"], cwd=tf_path, stdout=subprocess.PIPE)
             if tf_refresh_cmd.returncode == 0:
                 logger.info("Local state matches remote resources!")
 
@@ -132,6 +132,13 @@ class GuardCommand(Command):
             # If there is differences, apply it
             if tf_refresh_cmd.returncode == 2:
                 logger.info("Remote is different from local!")
+
+                while tf_refresh_cmd.stdout is not None:
+                    line = tf_refresh_cmd.stdout.readline().decode("utf-8")
+                    if not line:
+                        break
+                    logger.info(f"Terraform State | {line.rstrip()}")
+
                 logger.info("Applying Terraform resources...")
 
                 tf_apply_cmd = subprocess.run(["terraform", "apply", "-no-color", "-auto-approve"], cwd=tf_path, stdout=-1)
