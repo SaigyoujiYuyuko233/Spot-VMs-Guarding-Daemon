@@ -59,7 +59,7 @@ class GuardCommand(Command):
         if not os.path.isfile(f"{config_root}/config.json"):
             log.log_critical_and_raise(Exception(f"Config [{config_root}/config.json] does not exist"))
 
-        config = load_json(os.path.join(config_root, "config.json"))
+        config = self.load_json(os.path.join(config_root, "config.json"))
 
         # init tf
         if not self.option("skip-tf-init"):
@@ -108,11 +108,11 @@ class GuardCommand(Command):
 
             # check instance here, this way we can know to run ansible or not
             try:
-                instance_before_apply = tf_state_util.find_vm_instance(
+                instance_before_apply = tf_state_util.find_resource_by_path(
                     self.load_json(tf_state_path)["resources"], config["terraform"]["instance_path"]
                 )
             except Exception as e:
-                logger.error("Fail to load Terraform state!", e)
+                logger.error(f"Fail to load Terraform state: {e}")
                 continue
 
             # if instance does not exist, we will run ansible
@@ -142,7 +142,7 @@ class GuardCommand(Command):
 
             # re-check instance after applying
             try:
-                instance = tf_state_util.find_vm_instance(
+                instance = tf_state_util.find_resource_by_path(
                     self.load_json(tf_state_path)["resources"], config["terraform"]["instance_path"]
                 )
             except Exception as e:
@@ -163,7 +163,7 @@ class GuardCommand(Command):
                     )
 
             try:
-                instance = tf_state_util.find_vm_instance(
+                instance = tf_state_util.find_resource_by_path(
                     self.load_json(tf_state_path)["resources"], config["terraform"]["instance_path"]
                 )
             except Exception as e:
