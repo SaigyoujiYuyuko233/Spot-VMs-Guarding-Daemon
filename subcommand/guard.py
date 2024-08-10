@@ -86,7 +86,7 @@ class GuardCommand(Command):
 
             if tf_plan_cmd.returncode == 0:
                 logger.info("Local state matches remote resources!")
-                continue
+                # continue
 
             if tf_plan_cmd.returncode == 1:
                 logger.error("Terraform plan failed! Retry later...", Exception(tf_plan_cmd.stdout.decode("utf-8")))
@@ -178,8 +178,8 @@ class GuardCommand(Command):
             # ============ Prepare Ansible Run ============
             logger.info("Preparing Ansible run...")
 
-            for ansible_path in glob.glob(f"{ansible_root}/*/"):
-                ansible_config = config["ansible"][os.path.basename(ansible_path)]
+            for ansible_path in glob.glob(f"{ansible_root}/*"):
+                ansible_config = config["ansible"][ansible_path.split("/")[-1]]
 
                 ansible_inv = "inventory.ini"
                 ansible_playbook = "playbook.yaml"
@@ -188,19 +188,12 @@ class GuardCommand(Command):
                     ansible_inv = ansible_config["inventory"]
 
                 if "playbook" in ansible_config and ansible_config["playbook"] != "":
-                    ansible_inv = ansible_config["playbook"]
+                    ansible_playbook = ansible_config["playbook"]
 
                 ansible_inv = os.path.join(ansible_path, ansible_inv)
-                ansible_playbook = os.path.join(ansible_path, ansible_playbook)
-
-                if not os.path.isfile(ansible_inv):
-                    log.log_critical_and_raise(Exception(f"Ansible inventory [{ansible_inv}] does not exist"))
-
-                if not os.path.isfile(ansible_playbook):
-                    log.log_critical_and_raise(Exception(f"Ansible playbook [{ansible_playbook}] does not exist"))
 
                 # generate inventory
-                logger.info(f"Generating Ansible inventory for {ansible_path.split('/')[-2]}...")
+                logger.info(f"Generating Ansible inventory for {ansible_path.split('/')[-1]}...")
                 try:
                     with open(ansible_inv, mode="r", encoding="utf-8") as f:
                         inv_tmp = f.read()
@@ -212,7 +205,7 @@ class GuardCommand(Command):
                 inv_tmp = inv_tmp.replace("%instance_ip%", instance[config["terraform"]["instance_ip_key"]])
 
                 try:
-                    ansible_inv_tmp_file = f"{ansible_path}/inventory-gen.ini"
+                    ansible_inv_tmp_file = os.path.join(ansible_path, "inventory-gen.ini")
                     with open(ansible_inv_tmp_file, mode="w+", encoding="utf-8") as f:
                         f.write(inv_tmp)
                         f.close()
