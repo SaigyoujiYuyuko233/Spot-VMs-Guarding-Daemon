@@ -1,8 +1,8 @@
-from constant.terraform import INSTANCE_LABEL
+def find_resource_by_path(resources: list, path: str):
+    nodes = path.split(".")
 
-
-def find_vm_instance(resources: list):
     for r in resources:
-        if r["type"] in INSTANCE_LABEL:
-            return r['instances'][0]['attributes']
+        if r["type"] == nodes[0] and r["name"] == nodes[1]:
+            return r["instances"][0]["attributes"]
+
     return None

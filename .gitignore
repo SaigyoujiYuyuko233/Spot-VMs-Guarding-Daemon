@@ -1,4 +1,5 @@
 .venv/
+venv/
 config/
 vm_config/
 **/.terraform
@@ -8,3 +9,4 @@ __pycache__/
 .idea/webServers.xml
 .idea/sshConfigs.xml
 .idea/deployment.xml
+.vscode/sftp.json

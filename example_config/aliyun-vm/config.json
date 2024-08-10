@@ -1,0 +1,13 @@
+{
+    "ansible": {
+        "1-ping": {
+            "extra_arg": "",
+            "inventory": "user-inventory.ini",
+            "playbook": "ping-test.yaml"
+        }
+    },
+    "terraform": {
+        "instance_path": "alicloud_instance.example_instance",
+        "instance_ip_key": "public_ip"
+    }
+}
